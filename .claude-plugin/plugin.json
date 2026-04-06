@@ -1,0 +1,11 @@
+{
+  "name": "workbranch",
+  "description": "Connects git branches to Linear projects. Automatic context injection, issue and document creation.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Philip Dodds",
+    "url": "https://github.com/pdodds"
+  },
+  "repository": "https://github.com/pdodds/workbranch",
+  "license": "Apache-2.0"
+}
