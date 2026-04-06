@@ -35,11 +35,56 @@ linear auth
 
 ## Installation
 
-Install the plugin from the Claude Code plugin marketplace, or install directly:
+### 1. Install the plugin
+
+Clone the repo and point Claude Code at it:
 
 ```sh
-claude plugin install pdodds/workbranch
+git clone https://github.com/pdodds/workbranch.git
+claude --plugin-dir /path/to/workbranch
 ```
+
+Or use the plugin marketplace from within Claude Code:
+
+```
+/plugin marketplace add pdodds/workbranch
+/plugin install workbranch@pdodds-workbranch
+```
+
+### 2. Grant permissions
+
+The plugin's hooks run `git`, `python3`, and `linear` commands. Claude Code will prompt you to allow these on first use, or you can pre-approve them by adding to your project's `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(python3:*)",
+      "Bash(linear:*)"
+    ]
+  }
+}
+```
+
+## Quick start
+
+```sh
+# Switch to a feature branch
+git checkout -b feature/my-feature
+
+# Start Claude Code (the hook auto-detects your branch)
+claude
+```
+
+Then inside Claude Code:
+
+1. **`/workbranch-init`** — creates a Linear project linked to your branch
+2. **`/workbranch-issue`** — creates issues as you work
+3. **`/workbranch-doc`** — creates design docs for bigger efforts
+4. **`/workbranch`** — shows the full project status at any time
+
+The ConversationStart hook runs automatically on every session, so project context is always there without running any commands.
 
 ## Commands
 
