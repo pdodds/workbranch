@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "workbranch",
-      "source": ".",
+      "source": "./",
       "description": "Development workflow orchestrator. Manages the full loop: describe problem → Linear ticket → git worktree → implement → PR → review → cleanup.",
       "version": "2.0.0"
     }
