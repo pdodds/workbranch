@@ -1,3 +1,13 @@
 {
-  "team": "ENGG"
+  "team": "ENGG",
+  "reviewers": ["ghuser1", "ghuser2"],
+  "branch_prefix": {
+    "bug": "fix",
+    "feature": "feat",
+    "improvement": "chore"
+  },
+  "bootstrap": "npm install",
+  "test": "npm test",
+  "lint": "npm run lint",
+  "typecheck": "npm run typecheck"
 }
