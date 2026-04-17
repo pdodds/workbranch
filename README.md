@@ -1,36 +1,50 @@
 # Workbranch
 
-A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that connects git branches to [Linear](https://linear.app) projects. Workbranch automatically injects project context into every conversation — issues, documents, and status — so you never have to context-switch between your terminal and your project tracker.
+Development workflow orchestrator for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-Big work gets Linear documents for planning and design. Small fixes get Linear issues for tracking. Branch context is automatic.
+Describe a problem. Workbranch creates the ticket, sets up an isolated worktree, and guides you through implementation, PR, review, and cleanup — all without leaving the terminal.
 
 ## How it works
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  You start a Claude Code conversation on a branch   │
-│                                                     │
-│  ConversationStart hook fires automatically         │
-│    ↓                                                │
-│  Reads current git branch                           │
-│    ↓                                                │
-│  Searches Linear for a project with                 │
-│    [branch: <branch-name>] in its description       │
-│    ↓                                                │
-│  Injects project status, issues, and documents      │
-│  into the session context                           │
-└─────────────────────────────────────────────────────┘
+describe problem → /work → ticket + worktree → implement → /work-pr → PR → review → /work-done → cleanup
 ```
 
-Projects are linked to branches via a `[branch: <name>]` marker in the Linear project description. Once linked, every conversation on that branch starts with full project context — no commands needed.
+```
+┌──────────────────────────────────────────────────────────────┐
+│  1. Describe a problem, bug, or feature                     │
+│     ↓                                                       │
+│  2. /work — creates Linear ticket, branch, worktree         │
+│     ↓                                                       │
+│  3. Implement — code, test, commit                          │
+│     ↓                                                       │
+│  4. /work-pr — runs checks, pushes, opens PR                │
+│     ↓                                                       │
+│  5. Review — address feedback, push updates                 │
+│     ↓                                                       │
+│  6. /work-done — removes worktree, cleans up branch         │
+└──────────────────────────────────────────────────────────────┘
+```
 
 ## Prerequisites
 
-Install and authenticate the [Linear CLI](https://www.npmjs.com/package/@anthropic-ai/linear-cli):
+**Claude Code** — [install docs](https://docs.anthropic.com/en/docs/claude-code)
 
+**worktrunk** (`wt`) — manages git worktrees:
+```sh
+# See https://github.com/pdodds/worktrunk for installation
+```
+
+**Linear CLI** — ticket management:
 ```sh
 npm install -g @anthropic-ai/linear-cli
 linear auth
+```
+
+**GitHub CLI** — PR management:
+```sh
+brew install gh
+gh auth login
 ```
 
 ## Installation
@@ -53,73 +67,109 @@ Or use the plugin marketplace from within Claude Code:
 
 ### 2. Grant permissions
 
-The plugin's hooks run `git`, `python3`, and `linear` commands. Claude Code will prompt you to allow these on first use, or you can pre-approve them by adding to your project's `.claude/settings.json`:
+Add to your project's `.claude/settings.local.json`:
 
 ```json
 {
   "permissions": {
     "allow": [
-      "Bash(git:*)",
-      "Bash(python3:*)",
-      "Bash(linear:*)"
+      "Bash(git:*)", "Bash(python3:*)", "Bash(linear:*)",
+      "Bash(gh:*)", "Bash(wt:*)", "Bash(which:*)"
     ]
   }
 }
 ```
 
+Or let Claude Code prompt you on first use.
+
 ## Quick start
 
 ```sh
-# Switch to a feature branch
-git checkout -b feature/my-feature
-
-# Start Claude Code (the hook auto-detects your branch)
+# Start Claude Code
 claude
 ```
 
-Then inside Claude Code:
+Then describe a problem and run `/work`:
 
-1. **`/workbranch-init`** — creates a Linear project linked to your branch
-2. **`/workbranch-issue`** — creates issues as you work
-3. **`/workbranch-doc`** — creates design docs for bigger efforts
-4. **`/workbranch`** — shows the full project status at any time
+> The invoice upload times out on files over 20MB. /work
 
-The ConversationStart hook runs automatically on every session, so project context is always there without running any commands.
+Workbranch creates a Linear ticket, sets up a worktree, and waits for your direction. Implement the fix, then run `/work-pr` to push and open a PR. After it merges, `/work-done` cleans up.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `/workbranch` | Show the linked project's status, issues, and documents |
-| `/workbranch-init` | Create a new Linear project and link it to the current branch |
-| `/workbranch-issue` | Create a Linear issue in the linked project |
-| `/workbranch-doc` | Create a Linear document in the linked project |
+| `/work` | Describe a problem — creates Linear ticket, sets up worktree, prepares for implementation |
+| `/work-status` | Show current ticket, worktree, PR status, and recent commits |
+| `/work-pr` | Run checks, push branch, open PR linked to Linear ticket |
+| `/work-done` | Clean up worktree and branch after PR is merged |
+| `/work-issue` | Create an additional Linear issue |
+| `/work-doc` | Create a Linear document |
 
 ## Configuration
 
-Optionally create a `.workbranch.json` file at your repo root to set the Linear team prefix (defaults to `ENGG`):
+Create a `.workbranch.json` at the repo root. All fields are optional:
 
 ```json
 {
-  "team": "YOUR_TEAM"
+  "team": "ENGG",
+  "reviewers": ["ghuser1", "ghuser2"],
+  "branch_prefix": {
+    "bug": "fix",
+    "feature": "feat",
+    "improvement": "chore"
+  },
+  "bootstrap": "npm install",
+  "test": "npm test",
+  "lint": "npm run lint",
+  "typecheck": "npm run typecheck"
 }
 ```
 
-See [`.workbranch.json.example`](.workbranch.json.example) for a template.
+| Field | Default | Purpose |
+|---|---|---|
+| `team` | `ENGG` | Linear team prefix |
+| `reviewers` | `[]` | GitHub usernames to request review from |
+| `branch_prefix` | `{"bug":"fix","feature":"feat","improvement":"chore"}` | Maps issue type to branch prefix |
+| `bootstrap` | — | Run after worktree creation (e.g. `npm install`) |
+| `test` | — | Test command, run before PR |
+| `lint` | — | Lint command, run before PR |
+| `typecheck` | — | Type-check command, run before PR |
+
+Worktree paths are managed by worktrunk, not this plugin. See `~/.config/worktrunk/config.toml`.
+
+## Team support
+
+Share `.workbranch.json` in the repo so the whole team uses the same config. Each team member authenticates their own CLIs (`linear auth`, `gh auth login`). The `reviewers` array controls who gets review requests on PRs created with `/work-pr`.
+
+## Error recovery
+
+| Succeeded | Failed | Recovery |
+|---|---|---|
+| Ticket created | Worktree creation | Retry `wt switch -c` manually, or delete ticket |
+| Ticket + worktree | Bootstrap | Fix deps, re-run bootstrap |
+| Checks pass | Push fails | Check remote access, retry |
+| Push succeeds | PR creation fails | Retry `gh pr create` |
+| PR merged | Worktree removal fails | `git worktree remove` manually |
+
+Each step reports clearly when it fails. Earlier steps are not rolled back — you fix forward.
 
 ## Project structure
 
 ```
 workbranch/
 ├── .claude-plugin/
-│   └── plugin.json                # Plugin manifest
+│   └── plugin.json                # Plugin manifest (v2.0.0)
 ├── hooks/
-│   └── hooks.json                 # ConversationStart hook
+│   ├── hooks.json                 # ConversationStart hook
+│   └── conversation-start.sh     # Branch context injection
 ├── skills/
-│   ├── workbranch/SKILL.md        # /workbranch — show project status
-│   ├── workbranch-init/SKILL.md   # /workbranch-init — link branch to project
-│   ├── workbranch-issue/SKILL.md  # /workbranch-issue — create issues
-│   └── workbranch-doc/SKILL.md    # /workbranch-doc — create documents
+│   ├── work/SKILL.md             # /work — start working
+│   ├── work-status/SKILL.md      # /work-status — show state
+│   ├── work-pr/SKILL.md          # /work-pr — push and open PR
+│   ├── work-done/SKILL.md        # /work-done — clean up
+│   ├── work-issue/SKILL.md       # /work-issue — create issue
+│   └── work-doc/SKILL.md         # /work-doc — create document
 ├── .workbranch.json.example       # Config template
 ├── LICENSE                        # Apache 2.0
 └── README.md
