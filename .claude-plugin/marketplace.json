@@ -1,0 +1,19 @@
+{
+  "name": "workbranch",
+  "owner": {
+    "name": "Philip Dodds",
+    "email": "philip@kodexa.com"
+  },
+  "metadata": {
+    "description": "Development workflow orchestrator — manages the full loop from problem to PR",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "workbranch",
+      "source": ".",
+      "description": "Development workflow orchestrator. Manages the full loop: describe problem → Linear ticket → git worktree → implement → PR → review → cleanup.",
+      "version": "2.0.0"
+    }
+  ]
+}
